@@ -227,9 +227,7 @@ export default function ChatPanel() {
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 </p> */}
                 <div className="text-sm whitespace-pre-wrap leading-tight">
-                  <ReactMarkdown components={components}>
-                    {message.content}
-                  </ReactMarkdown>
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>
                 <span className="text-xs opacity-70 block text-right mt-1">
                   {message.timestamp.toLocaleTimeString([], {
