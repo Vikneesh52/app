@@ -31,10 +31,12 @@ export default function FlowPanel() {
       const { flowDiagram } = event.detail;
 
       if (flowDiagram && mermaidRef.current) {
-        // The event now provides the rendered SVG directly
+        // The event provides the rendered SVG directly
         mermaidRef.current.innerHTML = flowDiagram;
         setIsLoading(false);
       } else {
+        // If no SVG provided, try to render the current mermaid code
+        renderMermaid(lastRenderedCodeRef.current || mermaidCode);
         setTimeout(() => setIsLoading(false), 500);
       }
     };
@@ -43,7 +45,10 @@ export default function FlowPanel() {
       const { mermaidCode } = event.detail;
       if (mermaidCode) {
         setMermaidCode(mermaidCode);
-        lastRenderedCodeRef.current = mermaidCode;
+        // Force immediate render of the new mermaid code
+        setTimeout(() => {
+          renderMermaid(mermaidCode);
+        }, 50);
       }
     };
 
@@ -73,7 +78,9 @@ export default function FlowPanel() {
 
   // Initial render and whenever mermaidCode changes
   useEffect(() => {
-    renderMermaid(mermaidCode);
+    if (mermaidCode) {
+      renderMermaid(mermaidCode);
+    }
   }, [mermaidCode]);
 
   // Re-render when switching back to diagram tab
@@ -97,11 +104,16 @@ export default function FlowPanel() {
       const mermaidModule = await import("mermaid");
       const mermaid = mermaidModule.default;
 
+      // Force clear mermaid cache to prevent rendering issues
+      if (typeof mermaid.clearCache === "function") {
+        mermaid.clearCache();
+      }
+
       mermaid.initialize({
         startOnLoad: false,
         theme: "neutral",
         securityLevel: "loose",
-        logLevel: 5,
+        logLevel: 1,
         fontFamily: "monospace",
       });
 
@@ -123,6 +135,9 @@ export default function FlowPanel() {
         mermaidRef.current.appendChild(container);
 
         try {
+          // Force a small delay to ensure DOM is ready
+          await new Promise((resolve) => setTimeout(resolve, 50));
+
           // Parse the diagram first to validate
           await mermaid.parse(code);
 

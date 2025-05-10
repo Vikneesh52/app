@@ -12,10 +12,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 // Define custom components for react-markdown to apply styles and reduce spacing
 const components = {
-  p: ({ node, ...props }) => (
-    // Apply a smaller bottom margin to paragraphs to control spacing between them
-    <p className="mb-1" {...props} />
-  ),
+  p: (props) => <p style={{ marginBottom: "0.25rem" }} {...props} />,
 };
 
 type Message = {
@@ -58,7 +55,7 @@ export default function ChatPanel() {
     return () => {
       document.removeEventListener(
         "chat-update",
-        handleChatUpdate as EventListener
+        handleChatUpdate as EventListener,
       );
     };
   }, []);
@@ -67,7 +64,7 @@ export default function ChatPanel() {
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
+        "[data-radix-scroll-area-viewport]",
       );
       if (scrollContainer) {
         setTimeout(() => {
@@ -94,31 +91,18 @@ export default function ChatPanel() {
     const userQuery = input;
     setInput("");
 
-    // Show loading indicator
-    const loadingId = Date.now() + 1;
-    const loadingMessage: Message = {
-      id: loadingId.toString(),
-      content: "Thinking...",
-      sender: "ai",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, loadingMessage]);
-
     try {
       // Send to AI and get response
       const response = await generateApp(userQuery);
 
-      // Remove loading message and add actual response
+      // Add AI response
       setMessages((prev) =>
-        prev
-          .filter((msg) => msg.id !== loadingId.toString())
-          .concat({
-            id: (Date.now() + 2).toString(),
-            content: response.text || "Sorry, I couldn't generate a response.",
-            sender: "ai",
-            timestamp: new Date(),
-          })
+        prev.concat({
+          id: Date.now().toString(),
+          content: response.text || "Sorry, I couldn't generate a response.",
+          sender: "ai",
+          timestamp: new Date(),
+        }),
       );
 
       // Dispatch events to update other panels if response contains code or mermaid
@@ -134,19 +118,25 @@ export default function ChatPanel() {
           detail: { mermaidCode: response.mermaidCode },
         });
         document.dispatchEvent(mermaidCodeEvent);
+
+        // Also dispatch a flow-diagram-update event to ensure the diagram is rendered
+        setTimeout(() => {
+          const flowDiagramEvent = new CustomEvent("flow-diagram-update", {
+            detail: { flowDiagram: null },
+          });
+          document.dispatchEvent(flowDiagramEvent);
+        }, 100);
       }
     } catch (error) {
       // Handle error
       setMessages((prev) =>
-        prev
-          .filter((msg) => msg.id !== loadingId.toString())
-          .concat({
-            id: (Date.now() + 2).toString(),
-            content:
-              "Sorry, there was an error processing your request. Please try again.",
-            sender: "ai",
-            timestamp: new Date(),
-          })
+        prev.concat({
+          id: Date.now().toString(),
+          content:
+            "Sorry, there was an error processing your request. Please try again.",
+          sender: "ai",
+          timestamp: new Date(),
+        }),
       );
       console.error("Error generating response:", error);
     }
@@ -161,7 +151,7 @@ export default function ChatPanel() {
           `[${msg.timestamp.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
-          })}] ${msg.sender === "user" ? "You" : "AI"}: ${msg.content}`
+          })}] ${msg.sender === "user" ? "You" : "AI"}: ${msg.content}`,
       )
       .join("\n\n");
 
@@ -223,11 +213,10 @@ export default function ChatPanel() {
                     <span className="text-xs font-medium">AI Assistant</span>
                   </div>
                 )}
-                {/* <p className="text-sm whitespace-pre-wrap">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                </p> */}
                 <div className="text-sm whitespace-pre-wrap leading-tight">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                  <ReactMarkdown components={components}>
+                    {message.content}
+                  </ReactMarkdown>
                 </div>
                 <span className="text-xs opacity-70 block text-right mt-1">
                   {message.timestamp.toLocaleTimeString([], {
@@ -255,11 +244,63 @@ export default function ChatPanel() {
             placeholder="Ask the AI assistant..."
             className="flex-1"
           />
-          <AIConfigModal />
           <Button type="submit" size="icon">
             <Send className="h-4 w-4" />
           </Button>
         </form>
+
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium">AI Configuration</h4>
+            <AIConfigModal />
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md mb-4">
+            <div className="text-sm">
+              {isConfigured ? (
+                <span className="flex items-center">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                  Using {provider} / {model}
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                  Not configured
+                </span>
+              )}
+            </div>
+          </div>
+
+          <h4 className="font-medium mb-2">Example Prompts</h4>
+          <div className="space-y-2">
+            <div
+              className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() =>
+                setInput(
+                  "Create a personal portfolio website with a hero section, about me, skills, projects, and contact form.",
+                )
+              }
+            >
+              <p className="font-medium">Portfolio Website</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Personal portfolio with projects showcase
+              </p>
+            </div>
+            <div
+              className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() =>
+                setInput(
+                  "Build a task management app with the ability to create, edit, and delete tasks. Include task categories and priority levels.",
+                )
+              }
+            >
+              <p className="font-medium">Task Manager</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Simple todo/task management application
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
