@@ -32,12 +32,12 @@ export default function PreviewPanel() {
 
     document.addEventListener(
       "app-preview-update",
-      handleAppPreviewUpdate as EventListener
+      handleAppPreviewUpdate as EventListener,
     );
     return () => {
       document.removeEventListener(
         "app-preview-update",
-        handleAppPreviewUpdate as EventListener
+        handleAppPreviewUpdate as EventListener,
       );
     };
   }, []);
@@ -97,7 +97,7 @@ export default function PreviewPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border shadow-sm">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg border shadow-sm">
       <div className="p-3 border-b flex justify-between items-center">
         <div>
           <h3 className="font-medium text-lg">Live Preview</h3>

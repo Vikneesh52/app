@@ -41,13 +41,9 @@ export default function ChatPanel() {
   ]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const loadingMessageRef = useRef<string | null>(null);
-  const loadingStagesRef = useRef<string[]>([
-    "Got it, working on it...",
-    "Generating response...",
-    "Finishing up...",
-  ]);
-  const loadingStageIndexRef = useRef(0);
-  const loadingIntervalRef = useRef<number | null>(null);
+  // Remove loading stages
+  // Remove loading stage index
+  // Remove loading interval ref
 
   // Listen for chat updates from the prompt panel
   useEffect(() => {
@@ -68,7 +64,7 @@ export default function ChatPanel() {
     return () => {
       document.removeEventListener(
         "chat-update",
-        handleChatUpdate as EventListener
+        handleChatUpdate as EventListener,
       );
     };
   }, []);
@@ -77,7 +73,7 @@ export default function ChatPanel() {
   useEffect(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
+        "[data-radix-scroll-area-viewport]",
       );
       if (scrollContainer) {
         setTimeout(() => {
@@ -87,39 +83,17 @@ export default function ChatPanel() {
     }
   }, [messages]);
 
-  // Clean up loading interval on unmount
-  useEffect(() => {
-    return () => {
-      if (loadingIntervalRef.current) {
-        clearInterval(loadingIntervalRef.current);
-      }
-    };
-  }, []);
+  // No loading interval to clean up
 
   const toggleFeature = (feature: string) => {
     setSelectedFeatures((prev) =>
       prev.includes(feature)
         ? prev.filter((f) => f !== feature)
-        : [...prev, feature]
+        : [...prev, feature],
     );
   };
 
-  const updateLoadingMessage = () => {
-    if (loadingMessageRef.current) {
-      loadingStageIndexRef.current =
-        (loadingStageIndexRef.current + 1) % loadingStagesRef.current.length;
-      const newStatusText =
-        loadingStagesRef.current[loadingStageIndexRef.current];
-
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === loadingMessageRef.current
-            ? { ...msg, statusText: newStatusText }
-            : msg
-        )
-      );
-    }
-  };
+  // Remove the loading message update function as we don't want simulated responses
 
   const handleSendMessage = async () => {
     if (!input.trim() || !isConfigured) return;
@@ -139,12 +113,9 @@ export default function ChatPanel() {
     const userQuery = input;
     setInput("");
 
-    // Show loading indicator with initial status
+    // Show simple loading indicator
     const loadingId = (Date.now() + 1).toString();
     loadingMessageRef.current = loadingId;
-    loadingStageIndexRef.current = 0;
-
-    const initialStatusText = loadingStagesRef.current[0];
 
     const loadingMessage: Message = {
       id: loadingId,
@@ -152,17 +123,12 @@ export default function ChatPanel() {
       sender: "ai",
       timestamp: new Date(),
       status: "loading",
-      statusText: initialStatusText,
+      statusText: "Generating response...",
     };
 
     setMessages((prev) => [...prev, loadingMessage]);
 
-    // Start the loading status update interval
-    if (loadingIntervalRef.current) {
-      clearInterval(loadingIntervalRef.current);
-    }
-
-    loadingIntervalRef.current = window.setInterval(updateLoadingMessage, 2000);
+    // We don't want to show simulated loading messages
 
     try {
       // Enhance prompt with selected features
@@ -192,7 +158,7 @@ export default function ChatPanel() {
             sender: "ai",
             timestamp: new Date(),
             status: "complete",
-          })
+          }),
       );
 
       // Send the generated code to the preview panel
@@ -251,7 +217,7 @@ export default function ChatPanel() {
             sender: "ai",
             timestamp: new Date(),
             status: "error",
-          })
+          }),
       );
       console.error("Error generating response:", error);
     }
@@ -268,7 +234,7 @@ export default function ChatPanel() {
           `[${msg.timestamp.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
-          })}] ${msg.sender === "user" ? "You" : "AI"}: ${msg.content}`
+          })}] ${msg.sender === "user" ? "You" : "AI"}: ${msg.content}`,
       )
       .join("\n\n");
 
@@ -358,27 +324,155 @@ export default function ChatPanel() {
       </ScrollArea>
 
       <div className="p-3 border-t">
-        <Tabs defaultValue="prompt" className="mb-3">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="prompt">Prompt</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="prompt" className="pt-2">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }}
-              className="flex flex-col gap-2"
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendMessage();
+          }}
+          className="flex flex-col gap-2"
+        >
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Describe the web app you want to build..."
+            className="min-h-[100px]"
+          />
+          <div className="flex justify-end items-center">
+            <Button
+              type="submit"
+              disabled={!input.trim() || isGenerating || !isConfigured}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white"
             >
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Describe the web app you want to build..."
-                className="min-h-[100px]"
-              />
-              <div className="flex justify-between items-center">
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="mr-2 h-4 w-4" /> Generate App
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Features</h4>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={
+                    selectedFeatures.includes("auth") ? "default" : "outline"
+                  }
+                  className="justify-start"
+                  onClick={() => toggleFeature("auth")}
+                >
+                  Authentication
+                </Button>
+                <Button
+                  variant={
+                    selectedFeatures.includes("database")
+                      ? "default"
+                      : "outline"
+                  }
+                  className="justify-start"
+                  onClick={() => toggleFeature("database")}
+                >
+                  Database
+                </Button>
+                <Button
+                  variant={
+                    selectedFeatures.includes("api") ? "default" : "outline"
+                  }
+                  className="justify-start"
+                  onClick={() => toggleFeature("api")}
+                >
+                  API Integration
+                </Button>
+                <Button
+                  variant={
+                    selectedFeatures.includes("upload") ? "default" : "outline"
+                  }
+                  className="justify-start"
+                  onClick={() => toggleFeature("upload")}
+                >
+                  File Upload
+                </Button>
+                <Button
+                  variant={
+                    selectedFeatures.includes("darkmode")
+                      ? "default"
+                      : "outline"
+                  }
+                  className="justify-start"
+                  onClick={() => toggleFeature("darkmode")}
+                >
+                  Dark Mode
+                </Button>
+                <Button
+                  variant={
+                    selectedFeatures.includes("responsive")
+                      ? "default"
+                      : "outline"
+                  }
+                  className="justify-start"
+                  onClick={() => toggleFeature("responsive")}
+                >
+                  Responsive Design
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-2">Example Prompts</h4>
+              <div className="space-y-2">
+                <div
+                  className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() =>
+                    setInput(
+                      "Create a personal portfolio website with a hero section, about me, skills, projects, and contact form.",
+                    )
+                  }
+                >
+                  <p className="font-medium">Portfolio Website</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Personal portfolio with projects showcase
+                  </p>
+                </div>
+                <div
+                  className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() =>
+                    setInput(
+                      "Build a task management app with the ability to create, edit, and delete tasks. Include task categories and priority levels.",
+                    )
+                  }
+                >
+                  <p className="font-medium">Task Manager</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Simple todo/task management application
+                  </p>
+                </div>
+                <div
+                  className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() =>
+                    setInput(
+                      "Create a weather dashboard that shows current weather and 5-day forecast for a city. Include temperature, humidity, and wind speed.",
+                    )
+                  }
+                >
+                  <p className="font-medium">Weather Dashboard</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Weather forecast application
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-2">AI Configuration</h4>
+              <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
                 <div className="text-sm">
                   {isConfigured ? (
                     <span className="flex items-center">
@@ -392,146 +486,11 @@ export default function ChatPanel() {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-2">
-                  <AIConfigModal />
-                  <Button
-                    type="submit"
-                    disabled={!input.trim() || isGenerating || !isConfigured}
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="mr-2 h-4 w-4" /> Generate App
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </TabsContent>
-
-          <TabsContent value="settings" className="pt-2">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">Features</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant={
-                      selectedFeatures.includes("auth") ? "default" : "outline"
-                    }
-                    className="justify-start"
-                    onClick={() => toggleFeature("auth")}
-                  >
-                    Authentication
-                  </Button>
-                  <Button
-                    variant={
-                      selectedFeatures.includes("database")
-                        ? "default"
-                        : "outline"
-                    }
-                    className="justify-start"
-                    onClick={() => toggleFeature("database")}
-                  >
-                    Database
-                  </Button>
-                  <Button
-                    variant={
-                      selectedFeatures.includes("api") ? "default" : "outline"
-                    }
-                    className="justify-start"
-                    onClick={() => toggleFeature("api")}
-                  >
-                    API Integration
-                  </Button>
-                  <Button
-                    variant={
-                      selectedFeatures.includes("upload")
-                        ? "default"
-                        : "outline"
-                    }
-                    className="justify-start"
-                    onClick={() => toggleFeature("upload")}
-                  >
-                    File Upload
-                  </Button>
-                  <Button
-                    variant={
-                      selectedFeatures.includes("darkmode")
-                        ? "default"
-                        : "outline"
-                    }
-                    className="justify-start"
-                    onClick={() => toggleFeature("darkmode")}
-                  >
-                    Dark Mode
-                  </Button>
-                  <Button
-                    variant={
-                      selectedFeatures.includes("responsive")
-                        ? "default"
-                        : "outline"
-                    }
-                    className="justify-start"
-                    onClick={() => toggleFeature("responsive")}
-                  >
-                    Responsive Design
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Example Prompts</h4>
-                <div className="space-y-2">
-                  <div
-                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() =>
-                      setInput(
-                        "Create a personal portfolio website with a hero section, about me, skills, projects, and contact form."
-                      )
-                    }
-                  >
-                    <p className="font-medium">Portfolio Website</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Personal portfolio with projects showcase
-                    </p>
-                  </div>
-                  <div
-                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() =>
-                      setInput(
-                        "Build a task management app with the ability to create, edit, and delete tasks. Include task categories and priority levels."
-                      )
-                    }
-                  >
-                    <p className="font-medium">Task Manager</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Simple todo/task management application
-                    </p>
-                  </div>
-                  <div
-                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() =>
-                      setInput(
-                        "Create a weather dashboard that shows current weather and 5-day forecast for a city. Include temperature, humidity, and wind speed."
-                      )
-                    }
-                  >
-                    <p className="font-medium">Weather Dashboard</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Weather forecast application
-                    </p>
-                  </div>
-                </div>
+                <AIConfigModal />
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );

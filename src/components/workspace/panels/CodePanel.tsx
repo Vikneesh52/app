@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import TerminalPanel from "./TerminalPanel";
-import dynamic from "next/dynamic";
+// Use dynamic import without next/dynamic
+const dynamicImport = (importFn) => {
+  return React.lazy(() => importFn());
+};
 import {
   ResizableHandle,
   ResizablePanel,
@@ -21,15 +24,8 @@ import {
 } from "@/components/ui/resizable";
 import "devicon/devicon.min.css";
 
-// Dynamically import Monaco Editor to prevent SSR issues
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex items-center justify-center h-full">
-      Loading editor...
-    </div>
-  ),
-});
+// Dynamically import Monaco Editor
+const MonacoEditor = dynamicImport(() => import("@monaco-editor/react"));
 
 export default function CodePanel() {
   const [selectedFile, setSelectedFile] = useState("index.html");
@@ -99,7 +95,7 @@ export default function CodePanel() {
     return () => {
       document.removeEventListener(
         "app-preview-update",
-        handleAppPreviewUpdate
+        handleAppPreviewUpdate,
       );
     };
   }, []);
@@ -146,8 +142,8 @@ export default function CodePanel() {
       type: selectedFile.endsWith(".html")
         ? "text/html"
         : selectedFile.endsWith(".css")
-        ? "text/css"
-        : "application/javascript",
+          ? "text/css"
+          : "application/javascript",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -212,7 +208,7 @@ export default function CodePanel() {
 
         // Prevent default browser save dialog
         return true; // Signal that the command handled the event
-      }
+      },
     );
 
     // Clean up the command when the component unmounts (if necessary, though editor mounting is rare)
@@ -237,10 +233,26 @@ export default function CodePanel() {
     // document.dispatchEvent(previewEvent);
   };
 
-  // Toggle editor theme
-  const toggleTheme = () => {
-    setEditorTheme((prev) => (prev === "vs-light" ? "vs-dark" : "vs-light"));
-  };
+  // Update editor theme based on document theme
+  useEffect(() => {
+    const isDarkMode = document.documentElement.classList.contains("dark");
+    setEditorTheme(isDarkMode ? "vs-dark" : "vs-light");
+
+    // Create a mutation observer to watch for class changes on the html element
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === "class") {
+          const isDarkMode =
+            document.documentElement.classList.contains("dark");
+          setEditorTheme(isDarkMode ? "vs-dark" : "vs-light");
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
 
   // Toggle sidebar collapse
   const toggleSidebar = () => {
@@ -291,7 +303,7 @@ export default function CodePanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg border shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg border shadow-sm overflow-hidden">
       <div className="p-3 border-b flex justify-between items-center">
         <div>
           <h3 className="font-medium text-lg">Code Editor</h3>
@@ -300,9 +312,6 @@ export default function CodePanel() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={toggleTheme}>
-            {editorTheme === "vs-light" ? "Dark Mode" : "Light Mode"}
-          </Button>
           {/* Copy and Download buttons now work with the currently active tab's content */}
           <Button
             variant="outline"
@@ -433,38 +442,45 @@ export default function CodePanel() {
 
               {/* Monaco editor - Always render */}
               <div className="flex-1">
-                <MonacoEditor
-                  height="100%"
-                  language={getLanguage(selectedFile)}
-                  value={parsedFiles[selectedFile] || ""}
-                  theme={editorTheme}
-                  onChange={handleEditorChange}
-                  onMount={handleEditorDidMount}
-                  options={{
-                    minimap: { enabled: true },
-                    scrollBeyondLastLine: false,
-                    fontSize: 14,
-                    wordWrap: "on",
-                    automaticLayout: true,
-                    readOnly: false, // Keep editable
-                    lineNumbers: "on",
-                    folding: true,
-                    renderLineHighlight: "all",
-                    scrollbar: {
-                      useShadows: false,
-                      verticalHasArrows: false,
-                      horizontalHasArrows: false,
-                      vertical: "visible",
-                      horizontal: "visible",
-                    },
-                    lineNumbersMinChars: 3,
-                    padding: {
-                      top: 12,
-                      bottom: 12,
-                    },
-                    // Add placeholder option if supported by monaco-editor/react or handle empty state within Monaco
-                  }}
-                />
+                <React.Suspense
+                  fallback={
+                    <div className="flex items-center justify-center h-full">
+                      Loading editor...
+                    </div>
+                  }
+                >
+                  <MonacoEditor
+                    height="100%"
+                    language={getLanguage(selectedFile)}
+                    value={parsedFiles[selectedFile] || ""}
+                    theme={editorTheme}
+                    onChange={handleEditorChange}
+                    onMount={handleEditorDidMount}
+                    options={{
+                      minimap: { enabled: true },
+                      scrollBeyondLastLine: false,
+                      fontSize: 14,
+                      wordWrap: "on",
+                      automaticLayout: true,
+                      readOnly: false, // Keep editable
+                      lineNumbers: "on",
+                      folding: true,
+                      renderLineHighlight: "all",
+                      scrollbar: {
+                        useShadows: false,
+                        verticalHasArrows: false,
+                        horizontalHasArrows: false,
+                        vertical: "visible",
+                        horizontal: "visible",
+                      },
+                      lineNumbersMinChars: 3,
+                      padding: {
+                        top: 12,
+                        bottom: 12,
+                      },
+                    }}
+                  />
+                </React.Suspense>
                 {/* Removed the conditional rendering for the "No files open" message */}
                 {/* Replaced with Monaco editor always rendering */}
               </div>

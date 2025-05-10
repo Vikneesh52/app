@@ -71,10 +71,10 @@ export default function FlowPanel() {
     };
   }, []);
 
-  // Initial render
+  // Initial render and whenever mermaidCode changes
   useEffect(() => {
     renderMermaid(mermaidCode);
-  }, []);
+  }, [mermaidCode]);
 
   // Re-render when switching back to diagram tab
   useEffect(() => {
@@ -85,12 +85,24 @@ export default function FlowPanel() {
 
   const renderMermaid = async (code: string) => {
     try {
+      // Ensure code is valid mermaid syntax
+      if (
+        !code.trim().startsWith("graph") &&
+        !code.trim().startsWith("flowchart")
+      ) {
+        code = `flowchart TD\n${code}`;
+      }
+
       // Dynamically import mermaid
-      const mermaid = await import("mermaid");
-      mermaid.default.initialize({
-        startOnLoad: true,
+      const mermaidModule = await import("mermaid");
+      const mermaid = mermaidModule.default;
+
+      mermaid.initialize({
+        startOnLoad: false,
         theme: "neutral",
         securityLevel: "loose",
+        logLevel: 5,
+        fontFamily: "monospace",
       });
 
       if (mermaidRef.current) {
@@ -110,12 +122,29 @@ export default function FlowPanel() {
         container.style.alignItems = "center";
         mermaidRef.current.appendChild(container);
 
-        // Render the diagram
-        mermaid.default.render(id, code).then(({ svg }) => {
+        try {
+          // Parse the diagram first to validate
+          await mermaid.parse(code);
+
+          // Render the diagram
+          const { svg } = await mermaid.render(id, code);
           container.innerHTML = svg;
+
           // Store the successfully rendered code
           lastRenderedCodeRef.current = code;
-        });
+        } catch (parseError) {
+          console.error("Mermaid parse error:", parseError);
+          // Try with a simplified diagram
+          const fallbackCode = `flowchart TD\n  A[Start] --> B[Process]\n  B --> C[End]`;
+          const { svg } = await mermaid.render(id, fallbackCode);
+          container.innerHTML = svg;
+
+          // Add error message
+          const errorDiv = document.createElement("div");
+          errorDiv.className = "text-red-500 text-sm mt-4 text-center";
+          errorDiv.textContent = "Error rendering diagram. Using fallback.";
+          container.appendChild(errorDiv);
+        }
       }
     } catch (error) {
       console.error("Error rendering mermaid diagram:", error);
@@ -123,7 +152,7 @@ export default function FlowPanel() {
         mermaidRef.current.innerHTML = `
           <div class="flex items-center justify-center h-full">
             <div class="text-center">
-              <div class="text-sm text-muted-foreground mb-2">Flow Diagram Preview</div>
+              <div class="text-sm text-red-500 mb-2">Error rendering diagram</div>
               <div class="border rounded-lg p-4 bg-muted/30">
                 <pre class="text-xs text-left">${code}</pre>
               </div>
