@@ -95,7 +95,7 @@ export default function CodePanel() {
     return () => {
       document.removeEventListener(
         "app-preview-update",
-        handleAppPreviewUpdate,
+        handleAppPreviewUpdate
       );
     };
   }, []);
@@ -142,8 +142,8 @@ export default function CodePanel() {
       type: selectedFile.endsWith(".html")
         ? "text/html"
         : selectedFile.endsWith(".css")
-          ? "text/css"
-          : "application/javascript",
+        ? "text/css"
+        : "application/javascript",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -208,7 +208,7 @@ export default function CodePanel() {
 
         // Prevent default browser save dialog
         return true; // Signal that the command handled the event
-      },
+      }
     );
 
     // Clean up the command when the component unmounts (if necessary, though editor mounting is rare)
@@ -436,8 +436,6 @@ export default function CodePanel() {
                     </div>
                   ))}
                 </div>
-                {/* Maximize button placeholder if needed */}
-                {/* <div><Maximize className="h-4 w-4 text-gray-600 dark:text-gray-400" /></div> */}
               </div>
 
               {/* Monaco editor - Always render */}
@@ -492,16 +490,9 @@ export default function CodePanel() {
         <ResizableHandle withHandle />
 
         {/* Terminal Section */}
-        <ResizablePanel defaultSize={40} minSize={1}>
+        <ResizablePanel defaultSize={40} minSize={1.5}>
           <div className="flex relative transition-all duration-200 h-full">
             <div className="w-full h-full relative">
-              {/* Terminal header with maximize control */}
-              <div className="flex items-center justify-between px-2 py-1 bg-gray-800 border-b border-gray-700">
-                <span className="text-sm font-medium text-gray-200">
-                  Terminal
-                </span>
-              </div>
-
               <div className="h-full">
                 <TerminalPanel className="h-full w-full" />
               </div>

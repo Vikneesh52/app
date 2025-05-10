@@ -53,7 +53,7 @@ export default function TerminalPanel({ className }: TerminalPanelProps) {
       setIsConnected(true);
       term.writeln("\r\n\x1b[1;32mConnected to terminal server\x1b[0m");
       term.writeln(
-        "Terminal is ready. You can run npm, git, and bash commands.",
+        "Terminal is ready. You can run npm, git, and bash commands."
       );
     };
 
@@ -161,7 +161,7 @@ export default function TerminalPanel({ className }: TerminalPanelProps) {
         setIsConnected(true);
         term.writeln("\r\n\x1b[1;32mConnected to terminal server\x1b[0m");
         term.writeln(
-          "Terminal is ready. You can run npm, git, and bash commands.",
+          "Terminal is ready. You can run npm, git, and bash commands."
         );
       };
 
@@ -180,7 +180,7 @@ export default function TerminalPanel({ className }: TerminalPanelProps) {
       ws.onerror = (error) => {
         console.error("WebSocket error:", error);
         term.writeln(
-          "\r\n\x1b[1;31mError connecting to terminal server\x1b[0m",
+          "\r\n\x1b[1;31mError connecting to terminal server\x1b[0m"
         );
         term.writeln("Please check if the terminal server is running.");
       };
@@ -257,37 +257,40 @@ export default function TerminalPanel({ className }: TerminalPanelProps) {
     >
       {/* Terminal content */}
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-end gap-2 p-1 bg-[#2a2a2a]">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
-            onClick={clearTerminal}
-            title="Clear Terminal"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
-            onClick={restartTerminal}
-            title="Restart Terminal"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
-            onClick={relaunchTerminal}
-            title="Relaunch Terminal"
-          >
-            <Power className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-between gap-2 px-2 py-1 bg-[#1a1a1a]">
+          <span className="text-sm font-medium text-gray-200">Terminal</span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
+              onClick={clearTerminal}
+              title="Clear Terminal"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
+              onClick={restartTerminal}
+              title="Restart Terminal"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 rounded-full hover:bg-gray-700 text-gray-400 hover:text-white"
+              onClick={relaunchTerminal}
+              title="Relaunch Terminal"
+            >
+              <Power className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div
-          className="flex-1 overflow-y-auto relative"
+          className="flex-1 overflow-y-auto relative px-2"
           onClick={focusTerminal}
         >
           <div ref={terminalRef} className="w-full h-full" />

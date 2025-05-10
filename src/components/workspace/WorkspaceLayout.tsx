@@ -8,7 +8,6 @@ import PreviewPanel from "./panels/PreviewPanel";
 import CodePanel from "./panels/CodePanel";
 import FlowPanel from "./panels/FlowPanel";
 import ChatPanel from "./panels/ChatPanel";
-import Sidebar from "./Sidebar";
 
 export default function WorkspaceLayout() {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([
@@ -19,23 +18,13 @@ export default function WorkspaceLayout() {
     setSelectedFeatures((prev) =>
       prev.includes(feature)
         ? prev.filter((f) => f !== feature)
-        : [...prev, feature],
+        : [...prev, feature]
     );
   };
 
   return (
     <div className="h-screen w-full bg-muted/20 dark:bg-gray-950 overflow-hidden">
       <ResizablePanelGroup direction="horizontal" className="h-full">
-        {/* Sidebar */}
-        <ResizablePanel defaultSize={5} minSize={5} maxSize={5}>
-          <Sidebar
-            selectedFeatures={selectedFeatures}
-            toggleFeature={toggleFeature}
-          />
-        </ResizablePanel>
-
-        <ResizableHandle />
-
         {/* Main Content */}
         <ResizablePanel defaultSize={25} minSize={20}>
           <ChatPanel />

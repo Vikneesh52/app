@@ -17,7 +17,7 @@ export class GeminiProvider {
 
   constructor(config: GeminiConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model || "gemini-1.5-pro";
+    this.model = config.model || "gemini-2.5-flash-preview-04-17";
   }
 
   // Helper function to sanitize Mermaid labels and edge names
@@ -67,29 +67,18 @@ export class GeminiProvider {
     return extractedCode.trim();
   }
 
-  // Extract only mermaid code block and ensure it's valid
+  // Extract only mermaid code block
   private extractMermaidCode(fullText: string): string | undefined {
     const mermaidRegex = /```mermaid\s*\n([\s\S]*?)```/;
     const mermaidMatch = fullText.match(mermaidRegex);
 
     if (mermaidMatch) {
       // Sanitize mermaid code
-      const sanitizedCode = mermaidMatch[1]
+      return mermaidMatch[1]
         .trim()
         .split("\n")
         .map((line) => this.sanitizeMermaidLabel(line))
         .join("\n");
-
-      // Ensure the code starts with a valid diagram type
-      if (
-        !sanitizedCode.match(
-          /^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|journey)\s/,
-        )
-      ) {
-        return `flowchart TD\n${sanitizedCode}`;
-      }
-
-      return sanitizedCode;
     }
 
     return undefined;
@@ -174,19 +163,13 @@ IMPORTANT: Return the complete code in a single HTML file with embedded CSS and 
       // Then generate a mermaid diagram separately to ensure we get a good one
       const mermaidPrompt = `Generate a Mermaid diagram that visualizes the key components and flow of a web application based on the following requirements.
 
-Use flowchart TD notation with proper syntax. The diagram should show the user flow and component relationships.
+Use flowchart notation with proper syntax. Example: flowchart TD
+A[Component] --> B[Component]
+A -- action --> C[Component]
 
 User requirements: ${prompt}
 
-Only return the Mermaid diagram code without any explanation. The diagram should be detailed and correctly formatted.
-
-Ensure your response starts with "flowchart TD" and uses proper Mermaid syntax for nodes and connections.
-Example format:
-flowchart TD
-  A[Component] --> B[Component]
-  A -- action --> C[Component]
-  B --> D[Component]
-  C --> D`;
+Only return the Mermaid diagram code without any explanation. The diagram should be detailed and correctly formatted.`;
 
       const mermaidResponse = await this.generateContent(mermaidPrompt);
 
@@ -199,13 +182,6 @@ flowchart TD
     App --> UI[User Interface]
     UI --> Logic[Business Logic]
     Logic --> Data[Data Management]`;
-      } else if (
-        !finalMermaidCode.trim().startsWith("flowchart") &&
-        !finalMermaidCode.trim().startsWith("graph")
-      ) {
-        // Ensure the diagram starts with a valid declaration
-        finalMermaidCode = `flowchart TD
-${finalMermaidCode}`;
       }
 
       // Return combined response with guaranteed fields
