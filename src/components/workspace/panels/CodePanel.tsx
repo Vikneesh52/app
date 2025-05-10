@@ -424,7 +424,7 @@ export default function CodePanel() {
                         {file}
                         {/* Unsaved indicator - using CircleDot icon */}
                         {unsavedChanges.has(file) && (
-                          <Save className="ml-1 h-3 w-3 text-black" />
+                          <Save className="ml-1 h-3 w-3 text-foreground" />
                         )}
                       </span>
                       <button
