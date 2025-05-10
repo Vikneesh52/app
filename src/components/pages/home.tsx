@@ -11,31 +11,44 @@ import {
 import {
   ChevronRight,
   Code,
+  MessageSquare,
   Settings,
-  Terminal,
   User,
-  Wand2,
+  Workflow,
+  Laptop,
+  Layers,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../supabase/auth";
 
 export default function LandingPage() {
   const { user, signOut } = useAuth();
+
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* Apple-style navigation */}
+      {/* Navigation */}
       <header className="fixed top-0 z-50 w-full bg-[rgba(255,255,255,0.8)] backdrop-blur-md border-b border-[#f5f5f7]/30">
         <div className="max-w-[980px] mx-auto flex h-12 items-center justify-between px-4">
           <div className="flex items-center">
             <Link to="/" className="font-medium text-xl">
-              React App Builder
+              AI App Generator
             </Link>
           </div>
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="flex items-center gap-4">
+                <Link to="/workspace">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-sm font-medium hover:bg-blue-50 hover:text-blue-600 border-blue-200"
+                  >
+                    <Code className="mr-2 h-4 w-4" />
+                    App Builder
+                  </Button>
+                </Link>
                 <Link to="/dashboard">
                   <Button
                     variant="ghost"
@@ -110,62 +123,54 @@ export default function LandingPage() {
             AI-Powered Web App Generator
           </h2>
           <h3 className="text-2xl font-medium text-gray-500 mb-4">
-            Build React applications from text prompts in seconds
+            Create complete web applications with natural language prompts
           </h3>
           <div className="flex justify-center space-x-6 text-xl text-blue-600">
-            <Link to="/dashboard" className="flex items-center hover:underline">
-              Try it now <ChevronRight className="h-4 w-4" />
-            </Link>
-            <Link to="/signup" className="flex items-center hover:underline">
-              Get started <ChevronRight className="h-4 w-4" />
-            </Link>
+            {user ? (
+              <Link
+                to="/workspace"
+                className="flex items-center hover:underline"
+              >
+                Open App Builder <ChevronRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <Link to="/signup" className="flex items-center hover:underline">
+                Get started <ChevronRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
 
-          {/* App preview mockup */}
-          <div className="mt-10 max-w-4xl mx-auto bg-gray-100 rounded-xl p-6 shadow-md">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 bg-white rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium">Prompt Input</h4>
-                  <Wand2 className="h-4 w-4 text-purple-500" />
+          {/* App Builder Preview Image */}
+          <div className="mt-8 max-w-5xl mx-auto px-4">
+            <div className="bg-gray-900 rounded-xl overflow-hidden shadow-2xl border border-gray-800">
+              <div className="h-8 bg-gray-800 flex items-center px-4">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 </div>
-                <div className="bg-gray-50 rounded-md p-3 text-sm text-gray-700 min-h-[120px]">
-                  Create a todo app with a clean interface, dark mode toggle,
-                  and the ability to categorize tasks by priority. Include a
-                  date picker for due dates.
-                </div>
-                <Button className="mt-3 w-full bg-purple-600 hover:bg-purple-700">
-                  Generate App
-                </Button>
               </div>
-
-              <div className="flex-1 bg-white rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium">Live Preview</h4>
-                  <div className="flex gap-2">
-                    <div className="h-3 w-3 rounded-full bg-red-500"></div>
-                    <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
-                    <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                  </div>
+              <div className="flex h-[400px]">
+                <div className="w-16 bg-gray-800 flex flex-col items-center py-4 space-y-4">
+                  <div className="w-8 h-8 rounded-full bg-gray-700"></div>
+                  <div className="w-8 h-8 rounded-full bg-gray-700"></div>
+                  <div className="w-8 h-8 rounded-full bg-blue-600"></div>
+                  <div className="w-8 h-8 rounded-full bg-gray-700"></div>
                 </div>
-                <div className="bg-gray-800 rounded-md p-3 min-h-[120px] flex flex-col">
-                  <div className="flex justify-between items-center mb-2">
-                    <h5 className="text-white text-sm font-medium">My Tasks</h5>
-                    <div className="h-4 w-8 bg-gray-600 rounded-full"></div>
+                <div className="flex-1 flex">
+                  <div className="w-1/4 bg-gray-900 border-r border-gray-800 p-2">
+                    <div className="h-full bg-gray-800 rounded-md"></div>
                   </div>
-                  <div className="bg-gray-700 rounded p-2 mb-2">
-                    <div className="flex items-center">
-                      <div className="h-3 w-3 rounded-sm border border-green-400 mr-2"></div>
-                      <span className="text-white text-xs">
-                        Complete project
-                      </span>
+                  <div className="w-2/4 flex flex-col">
+                    <div className="h-3/5 bg-gray-900 border-b border-gray-800 p-2">
+                      <div className="h-full bg-gray-800 rounded-md"></div>
+                    </div>
+                    <div className="h-2/5 bg-gray-900 p-2">
+                      <div className="h-full bg-gray-800 rounded-md"></div>
                     </div>
                   </div>
-                  <div className="bg-gray-700 rounded p-2">
-                    <div className="flex items-center">
-                      <div className="h-3 w-3 rounded-sm border border-red-400 mr-2"></div>
-                      <span className="text-white text-xs">Review code</span>
-                    </div>
+                  <div className="w-1/4 bg-gray-900 border-l border-gray-800 p-2">
+                    <div className="h-full bg-gray-800 rounded-md"></div>
                   </div>
                 </div>
               </div>
@@ -176,41 +181,40 @@ export default function LandingPage() {
         {/* Features section */}
         <section className="py-20 bg-[#f5f5f7] text-center">
           <h2 className="text-5xl font-semibold tracking-tight mb-1">
-            How It Works
+            Powerful Features
           </h2>
           <h3 className="text-2xl font-medium text-gray-500 mb-4">
-            From text to functional React app in minutes
+            Everything you need to build modern web applications
           </h3>
-
           <div className="mt-8 max-w-6xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white p-8 rounded-2xl shadow-sm text-left">
               <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Wand2 className="h-6 w-6 text-blue-600" />
+                <MessageSquare className="h-6 w-6 text-blue-600" />
               </div>
-              <h4 className="text-xl font-medium mb-2">Describe Your App</h4>
+              <h4 className="text-xl font-medium mb-2">AI Chat Assistant</h4>
               <p className="text-gray-500">
-                Enter a detailed description of the app you want to build using
-                natural language.
+                Conversational AI helps you refine your app requirements and
+                provides guidance throughout the development process.
               </p>
             </div>
             <div className="bg-white p-8 rounded-2xl shadow-sm text-left">
               <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                <Code className="h-6 w-6 text-purple-600" />
+                <Workflow className="h-6 w-6 text-purple-600" />
               </div>
-              <h4 className="text-xl font-medium mb-2">AI Generates Code</h4>
+              <h4 className="text-xl font-medium mb-2">Flow Visualization</h4>
               <p className="text-gray-500">
-                Our AI analyzes your description and generates React components
-                and structure.
+                Automatically generate and edit MermaidJS diagrams to visualize
+                your application structure and user flows.
               </p>
             </div>
             <div className="bg-white p-8 rounded-2xl shadow-sm text-left">
               <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Terminal className="h-6 w-6 text-green-600" />
+                <Laptop className="h-6 w-6 text-green-600" />
               </div>
-              <h4 className="text-xl font-medium mb-2">Customize & Export</h4>
+              <h4 className="text-xl font-medium mb-2">Live Preview</h4>
               <p className="text-gray-500">
-                Edit the generated code in our live editor and export your
-                complete project.
+                See your application come to life with real-time previews as you
+                make changes through natural language prompts.
               </p>
             </div>
           </div>
@@ -220,56 +224,95 @@ export default function LandingPage() {
         <section className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
           <div className="bg-[#f5f5f7] rounded-3xl p-12 text-center">
             <h2 className="text-4xl font-semibold tracking-tight mb-1">
-              Live Preview
+              Multi-Panel Interface
             </h2>
             <h3 className="text-xl font-medium text-gray-500 mb-4">
-              See your app as you build it
+              Intuitive workspace for app development
             </h3>
-            <div className="flex justify-center space-x-6 text-lg text-blue-600">
-              <Link to="/" className="flex items-center hover:underline">
-                Learn more <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
             <div className="mt-4 bg-white p-6 rounded-xl shadow-sm max-w-sm mx-auto">
-              <div className="bg-gray-100 rounded-md h-40 flex items-center justify-center">
-                <div className="text-gray-400 text-sm">
-                  Live preview renders here
+              <div className="flex gap-2">
+                <div className="h-40 w-1/4 bg-gray-100 rounded-md"></div>
+                <div className="h-40 w-3/4 bg-gray-100 rounded-md flex flex-col">
+                  <div className="h-1/2 bg-gray-200 rounded-t-md"></div>
+                  <div className="h-1/2 bg-gray-300 rounded-b-md"></div>
                 </div>
               </div>
-              <div className="mt-4 h-8 bg-gray-100 rounded-md w-full"></div>
-              <div className="mt-2 h-8 bg-gray-100 rounded-md w-3/4 mx-auto"></div>
+              <div className="h-10 bg-gray-100 rounded-md w-full mt-2"></div>
             </div>
+            {user ? (
+              <Link to="/workspace">
+                <Button className="mt-6 bg-blue-600 hover:bg-blue-700 text-white">
+                  Open App Builder
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/signup">
+                <Button className="mt-6 bg-blue-600 hover:bg-blue-700 text-white">
+                  Sign Up to Try
+                </Button>
+              </Link>
+            )}
           </div>
           <div className="bg-[#f5f5f7] rounded-3xl p-12 text-center">
             <h2 className="text-4xl font-semibold tracking-tight mb-1">
-              Code Editor
+              AI Integration
             </h2>
             <h3 className="text-xl font-medium text-gray-500 mb-4">
-              Modify generated code
+              Multiple LLM providers
             </h3>
-            <div className="flex justify-center space-x-6 text-lg text-blue-600">
-              <Link to="/" className="flex items-center hover:underline">
-                View features <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
             <div className="mt-4 bg-gray-900 p-6 rounded-xl shadow-sm max-w-sm mx-auto text-left">
               <pre className="text-green-400 text-xs font-mono overflow-x-auto">
                 <code>
-                  {`function App() {
-  const [tasks, setTasks] = useState([]);
-  const [darkMode, setDarkMode] = useState(false);
-  
-  return (
-    <div className={darkMode ? "dark" : ""}>
-      <TaskList tasks={tasks} />
-      <AddTaskForm onAdd={setTasks} />
-    </div>
-  );
-}`}
+                  {`// Select your preferred AI model
+const { response } = await aiClient
+  .setModel('gpt-4')
+  .generateApp({
+    prompt: "Create a todo app",
+    features: ["auth", "database"]
+  });
+`}
                 </code>
               </pre>
             </div>
+            <div className="flex justify-center mt-6 gap-4">
+              <div className="bg-white p-2 rounded-lg shadow-sm w-12 h-12 flex items-center justify-center">
+                <span className="text-lg font-bold text-blue-600">GPT</span>
+              </div>
+              <div className="bg-white p-2 rounded-lg shadow-sm w-12 h-12 flex items-center justify-center">
+                <span className="text-lg font-bold text-purple-600">C</span>
+              </div>
+              <div className="bg-white p-2 rounded-lg shadow-sm w-12 h-12 flex items-center justify-center">
+                <span className="text-lg font-bold text-red-600">G</span>
+              </div>
+              <div className="bg-white p-2 rounded-lg shadow-sm w-12 h-12 flex items-center justify-center">
+                <span className="text-lg font-bold text-blue-500">Az</span>
+              </div>
+            </div>
           </div>
+        </section>
+
+        {/* Call to action section */}
+        <section className="py-20 text-center bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+          <h2 className="text-5xl font-semibold tracking-tight mb-4">
+            Start Building Today
+          </h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto">
+            Transform your ideas into fully functional web applications in
+            minutes with our AI-powered platform.
+          </p>
+          {user ? (
+            <Link to="/workspace">
+              <Button className="rounded-full bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
+                <Layers className="mr-2 h-5 w-5" /> Open App Builder
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/signup">
+              <Button className="rounded-full bg-white text-blue-600 hover:bg-gray-100 text-lg px-8 py-6">
+                Get Started for Free
+              </Button>
+            </Link>
+          )}
         </section>
       </main>
 
@@ -279,7 +322,7 @@ export default function LandingPage() {
           <div className="border-b border-gray-300 pb-8 grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h4 className="font-medium text-sm text-gray-900 mb-4">
-                React App Builder
+                AI App Generator
               </h4>
               <ul className="space-y-2">
                 <li>
@@ -385,7 +428,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="py-4">
-            <p>Copyright © 2025 React App Builder. All rights reserved.</p>
+            <p>Copyright © 2025 AI App Generator. All rights reserved.</p>
           </div>
         </div>
       </footer>
