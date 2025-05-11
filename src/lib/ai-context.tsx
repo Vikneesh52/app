@@ -5,6 +5,7 @@ import {
   AIProvider as AIProviderType,
 } from "./ai-providers";
 import { useToast } from "@/components/ui/use-toast";
+import { ProjectConfig } from "./project-generator";
 
 interface AIContextType {
   client: AIClient | null;
@@ -23,6 +24,7 @@ interface AIContextType {
     code?: string;
     error?: string;
     mermaidCode?: string;
+    config?: ProjectConfig;
   }>;
 }
 

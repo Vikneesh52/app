@@ -1,3 +1,4 @@
+// chatpanel2.tsx
 import React, { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -154,7 +155,25 @@ export default function ChatPanel() {
       }, 2000);
 
       // Send to AI and get response
-      const response = await generateApp(userQuery);
+      const enhancedPrompt = `
+        Create a web application with the following requirements:\n
+        ${userQuery}\n
+        \n
+        Include these features: Responseive Design\n
+        Use either React or Next.js as the frontend framework, depending on the requirements.\n
+        If the app needs server-side rendering, API routes, or would benefit from file-based routing, use Next.js.\n
+        If it's a simpler client-side application, use React with React Router.\n
+        Always use Tailwind CSS for styling.\n
+        For backend needs, use Express.js with TypeScript.\n
+        Organize the code into proper components and follow best practices for the chosen framework.\n
+      `;
+      const response = await generateApp(enhancedPrompt);
+
+      // Dispatch event to create a new project
+      const projectEvent = new CustomEvent("project-create", {
+        detail: { config: response.config },
+      });
+      document.dispatchEvent(projectEvent);
 
       // Final update: Complete response
       setMessages((prev) =>
