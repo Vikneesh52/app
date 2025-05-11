@@ -5,24 +5,13 @@ import { Download, RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
 
 export default function FlowPanel() {
   const mermaidRef = useRef<HTMLDivElement>(null);
-  const [mermaidCode, setMermaidCode] = useState<string>(`graph TD
-  A[Landing Page] --> B{User Logged In?}
-  B -->|Yes| C[Dashboard]
-  B -->|No| D[Login Page]
-  D --> E[Sign Up]
-  D --> C
-  C --> F[Create Project]
-  C --> G[View Projects]
-  F --> H[App Builder]
-  G --> H`);
+  const [mermaidCode, setMermaidCode] = useState<string>(``);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
-  const [activeTab, setActiveTab] = useState("diagram");
-  const diagramContainerRef = useRef<HTMLDivElement>(null);
-  const lastRenderedCodeRef = useRef<string>(mermaidCode);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [startPanPosition, setStartPanPosition] = useState({ x: 0, y: 0 });
+  const [renderedSvg, setRenderedSvg] = useState<string | null>(null);
 
   // Listen for flow diagram updates
   useEffect(() => {
@@ -30,13 +19,11 @@ export default function FlowPanel() {
       setIsLoading(true);
       const { flowDiagram } = event.detail;
 
-      if (flowDiagram && mermaidRef.current) {
-        // The event provides the rendered SVG directly
-        mermaidRef.current.innerHTML = flowDiagram;
-        setIsLoading(false);
+      if (flowDiagram) {
+        // If the event provides Mermaid code instead of rendered SVG
+        setMermaidCode(flowDiagram);
+        renderMermaid(flowDiagram);
       } else {
-        // If no SVG provided, try to render the current mermaid code
-        renderMermaid(lastRenderedCodeRef.current || mermaidCode);
         setTimeout(() => setIsLoading(false), 500);
       }
     };
@@ -45,136 +32,150 @@ export default function FlowPanel() {
       const { mermaidCode } = event.detail;
       if (mermaidCode) {
         setMermaidCode(mermaidCode);
-        // Force immediate render of the new mermaid code
-        setTimeout(() => {
-          renderMermaid(mermaidCode);
-        }, 50);
+        renderMermaid(mermaidCode);
       }
     };
 
     // Add both event listeners
     document.addEventListener(
       "flow-diagram-update",
-      handleFlowDiagramUpdate as EventListener,
+      handleFlowDiagramUpdate as EventListener
     );
 
     document.addEventListener(
       "mermaid-code-update",
-      handleMermaidCodeUpdate as EventListener,
+      handleMermaidCodeUpdate as EventListener
     );
 
     // Clean up both event listeners
     return () => {
       document.removeEventListener(
         "flow-diagram-update",
-        handleFlowDiagramUpdate as EventListener,
+        handleFlowDiagramUpdate as EventListener
       );
       document.removeEventListener(
         "mermaid-code-update",
-        handleMermaidCodeUpdate as EventListener,
+        handleMermaidCodeUpdate as EventListener
       );
     };
   }, []);
 
-  // Initial render and whenever mermaidCode changes
+  // Initial render
   useEffect(() => {
-    if (mermaidCode) {
-      renderMermaid(mermaidCode);
-    }
-  }, [mermaidCode]);
+    renderMermaid(mermaidCode);
+  }, []);
 
-  // Re-render when switching back to diagram tab
+  // Effect to apply rendered SVG when it changes
   useEffect(() => {
-    if (activeTab === "diagram") {
-      renderMermaid(lastRenderedCodeRef.current || mermaidCode);
+    if (renderedSvg && mermaidRef.current) {
+      mermaidRef.current.innerHTML = renderedSvg;
     }
-  }, [activeTab]);
+  }, [renderedSvg]);
 
   const renderMermaid = async (code: string) => {
-    try {
-      // Ensure code is valid mermaid syntax
-      if (
-        !code.trim().startsWith("graph") &&
-        !code.trim().startsWith("flowchart")
-      ) {
-        code = `flowchart TD\n${code}`;
-      }
+    setIsLoading(true);
 
+    // Add condition to prevent rendering if code is empty
+    if (!code || code.trim() === "") {
+      setRenderedSvg(null); // Clear previous SVG
+      setIsLoading(false);
+      if (mermaidRef.current) {
+        mermaidRef.current.innerHTML = `
+          <div class="h-full w-full flex items-center justify-center text-muted-foreground text-lg">
+            Build an App for workflow
+          </div>
+        `;
+      }
+      return; // Exit the function
+    }
+
+    try {
       // Dynamically import mermaid
       const mermaidModule = await import("mermaid");
       const mermaid = mermaidModule.default;
 
-      // Force clear mermaid cache to prevent rendering issues
-      if (typeof mermaid.clearCache === "function") {
-        mermaid.clearCache();
-      }
-
+      // Initialize mermaid with appropriate settings
       mermaid.initialize({
-        startOnLoad: false,
+        startOnLoad: false, // Important: Don't auto-render on page load
         theme: "neutral",
         securityLevel: "loose",
-        logLevel: 1,
-        fontFamily: "monospace",
+        fontFamily: "sans-serif",
       });
 
-      if (mermaidRef.current) {
-        // Clear previous content
-        mermaidRef.current.innerHTML = "";
+      // Generate a unique ID for this render
+      const id = `mermaid-${Date.now()}`;
 
-        // Create a unique ID for the diagram
-        const id = `mermaid-${Date.now()}`;
+      try {
+        // Use mermaid.render() to get the SVG
+        const { svg } = await mermaid.render(id, code);
 
-        // Create container for the diagram
-        const container = document.createElement("div");
-        container.id = id;
-        container.style.width = "100%";
-        container.style.height = "100%";
-        container.style.display = "flex";
-        container.style.justifyContent = "center";
-        container.style.alignItems = "center";
-        mermaidRef.current.appendChild(container);
+        // Store the SVG in state to persist across tab switches
+        setRenderedSvg(svg);
 
-        try {
-          // Force a small delay to ensure DOM is ready
-          await new Promise((resolve) => setTimeout(resolve, 50));
+        // Insert the SVG directly into the container
+        if (mermaidRef.current) {
+          mermaidRef.current.innerHTML = svg;
 
-          // Parse the diagram first to validate
-          await mermaid.parse(code);
+          // Adjust SVG styling for proper display
+          const svgElement = mermaidRef.current.querySelector("svg");
+          if (svgElement) {
+            svgElement.style.maxWidth = "100%";
+            svgElement.style.height = "100%";
+            svgElement.style.display = "block";
+            svgElement.style.margin = "0 auto";
 
-          // Render the diagram
-          const { svg } = await mermaid.render(id, code);
-          container.innerHTML = svg;
+            // Add viewBox if missing for better scaling
+            if (
+              !svgElement.hasAttribute("viewBox") &&
+              svgElement.hasAttribute("width") &&
+              svgElement.hasAttribute("height")
+            ) {
+              const width = svgElement.getAttribute("width") || "800";
+              const height = svgElement.getAttribute("height") || "600";
+              svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            }
+          }
+        }
+      } catch (renderError) {
+        console.error("Mermaid render error:", renderError);
+        // Display error message with code preview
+        const errorHtml = `
+          <div class="p-4 border border-red-300 bg-red-50 rounded-md text-red-800">
+            <p class="font-medium">Error rendering diagram</p>
+            <p class="text-sm mt-1">Please check your Mermaid syntax.</p>
+            <pre class="text-xs mt-2 p-2 bg-white border rounded">${renderError.toString()}</pre>
+          </div>
+        `;
 
-          // Store the successfully rendered code
-          lastRenderedCodeRef.current = code;
-        } catch (parseError) {
-          console.error("Mermaid parse error:", parseError);
-          // Try with a simplified diagram
-          const fallbackCode = `flowchart TD\n  A[Start] --> B[Process]\n  B --> C[End]`;
-          const { svg } = await mermaid.render(id, fallbackCode);
-          container.innerHTML = svg;
+        setRenderedSvg(errorHtml);
 
-          // Add error message
-          const errorDiv = document.createElement("div");
-          errorDiv.className = "text-red-500 text-sm mt-4 text-center";
-          errorDiv.textContent = "Error rendering diagram. Using fallback.";
-          container.appendChild(errorDiv);
+        if (mermaidRef.current) {
+          mermaidRef.current.innerHTML = errorHtml;
         }
       }
     } catch (error) {
-      console.error("Error rendering mermaid diagram:", error);
-      if (mermaidRef.current) {
-        mermaidRef.current.innerHTML = `
-          <div class="flex items-center justify-center h-full">
-            <div class="text-center">
-              <div class="text-sm text-red-500 mb-2">Error rendering diagram</div>
-              <div class="border rounded-lg p-4 bg-muted/30">
-                <pre class="text-xs text-left">${code}</pre>
-              </div>
+      console.error("Error loading mermaid:", error);
+      const fallbackContent = `
+        <div class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <div class="text-sm text-muted-foreground mb-2">Flow Diagram Preview</div>
+            <div class="border rounded-lg p-4 bg-muted/30">
+              <pre class="text-xs text-left">${code}</pre>
+            </div>
+            <div class="mt-2 text-sm text-red-600">
+              Error loading Mermaid library. Check console for details.
             </div>
           </div>
-        `;
+        </div>
+      `;
+
+      setRenderedSvg(fallbackContent);
+
+      if (mermaidRef.current) {
+        mermaidRef.current.innerHTML = fallbackContent;
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -186,10 +187,18 @@ export default function FlowPanel() {
     setZoomLevel((prev) => Math.max(prev - 0.1, 0.5));
   };
 
+  // Handle wheel events for zooming
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      const newZoomLevel = Math.max(0.5, Math.min(2, zoomLevel + delta));
+      setZoomLevel(newZoomLevel);
+    }
+  };
+
   const handleRefresh = () => {
-    setIsLoading(true);
     renderMermaid(mermaidCode);
-    setTimeout(() => setIsLoading(false), 500);
   };
 
   const handleExport = () => {
@@ -223,30 +232,8 @@ export default function FlowPanel() {
     }
   };
 
-  // Pan functionality
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left mouse button
-    setIsDragging(true);
-    setStartPosition({ x: e.clientX - position.x, y: e.clientY - position.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const newX = e.clientX - startPosition.x;
-    const newY = e.clientY - startPosition.y;
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg border shadow-sm">
+    <div className="flex flex-col h-full bg-white dark:bg-[#1a1a1a] rounded-lg border shadow-sm">
       <div className="p-3 border-b flex justify-between items-center">
         <div>
           <h3 className="font-medium text-lg">Flow Diagram</h3>
@@ -260,6 +247,7 @@ export default function FlowPanel() {
             size="sm"
             onClick={handleZoomOut}
             disabled={zoomLevel <= 0.5}
+            className="dark:bg-[#1a1a1a]"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
@@ -268,24 +256,45 @@ export default function FlowPanel() {
             size="sm"
             onClick={handleZoomIn}
             disabled={zoomLevel >= 2}
+            className="dark:bg-[#1a1a1a]"
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setPanPosition({ x: 0, y: 0 });
+            }}
+            title="Reset Pan Position"
+            className="dark:bg-[#1a1a1a]"
+          >
+            <span className="flex items-center justify-center h-4 w-4">⊕</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="dark:bg-[#1a1a1a]"
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-1 ${isLoading ? "animate-spin" : ""}`}
+            />{" "}
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            className="dark:bg-[#1a1a1a]"
+          >
             <Download className="h-4 w-4 mr-1" /> Export
           </Button>
         </div>
       </div>
 
-      <Tabs
-        defaultValue="diagram"
-        className="flex-1"
-        value={activeTab}
-        onValueChange={setActiveTab}
-      >
+      <Tabs defaultValue="diagram" className="flex-1">
         <div className="px-3 pt-2">
           <TabsList>
             <TabsTrigger value="diagram">Diagram</TabsTrigger>
@@ -293,41 +302,76 @@ export default function FlowPanel() {
           </TabsList>
         </div>
 
-        <TabsContent value="diagram" className="flex-1 p-3">
-          {isLoading ? (
+        <TabsContent
+          value="diagram"
+          className="flex-1 p-3"
+          style={{ height: "calc(100% - 42px)" }}
+        >
+          {!mermaidCode || mermaidCode.trim() === "" ? (
+            <div className="h-full w-full flex items-center justify-center text-muted-foreground text-lg">
+              Build an App for workflow
+            </div>
+          ) : isLoading ? (
             <div className="h-full w-full flex items-center justify-center">
               <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
             </div>
           ) : (
             <div
-              ref={diagramContainerRef}
-              className="h-full overflow-hidden relative"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseLeave}
-              style={{ cursor: isDragging ? "grabbing" : "grab" }}
+              className="h-full overflow-hidden flex items-center justify-center relative"
+              onMouseDown={(e) => {
+                if (e.button === 0) {
+                  // Left mouse button
+                  setIsPanning(true);
+                  setStartPanPosition({ x: e.clientX, y: e.clientY });
+                }
+              }}
+              onMouseMove={(e) => {
+                if (isPanning) {
+                  setPanPosition((prev) => ({
+                    x: prev.x + (e.clientX - startPanPosition.x) / zoomLevel,
+                    y: prev.y + (e.clientY - startPanPosition.y) / zoomLevel,
+                  }));
+                  setStartPanPosition({ x: e.clientX, y: e.clientY });
+                }
+              }}
+              onMouseUp={() => setIsPanning(false)}
+              onMouseLeave={() => setIsPanning(false)}
+              onWheel={handleWheel}
+              style={{
+                cursor: isPanning ? "grabbing" : "grab",
+                userSelect: "none",
+              }}
             >
               <div
-                className="absolute"
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${zoomLevel})`,
+                  transform: `scale(${zoomLevel}) translate(${panPosition.x}px, ${panPosition.y}px)`,
                   transformOrigin: "center center",
-                  transition: isDragging ? "none" : "transform 0.1s ease-out",
+                  transition: isPanning ? "none" : "transform 0.2s ease",
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <div ref={mermaidRef} className="w-full h-full" />
+                <div ref={mermaidRef} className="h-full w-full max-w-full" />
               </div>
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="code" className="p-3">
-          <div className="border rounded bg-muted dark:bg-gray-800 p-3">
-            <pre className="text-xs overflow-auto">{mermaidCode}</pre>
+          <div className="border rounded bg-muted p-3 h-64 overflow-auto dark:bg-[#1a1a1a]">
+            <textarea
+              className="w-full h-full text-xs font-mono resize-none bg-transparent outline-none dark:bg-[#1a1a1a]"
+              value={mermaidCode}
+              onChange={(e) => setMermaidCode(e.target.value)}
+              spellCheck="false"
+            ></textarea>
           </div>
           <div className="mt-2 text-xs text-muted-foreground">
-            This is the Mermaid code used to generate the flow diagram.
+            Edit the Mermaid code above and use the Refresh button at the top to
+            update the diagram.
           </div>
         </TabsContent>
       </Tabs>

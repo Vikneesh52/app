@@ -12,6 +12,7 @@ export interface AIResponse {
   text: string;
   code?: string;
   error?: string;
+  mermaidCode?: string;
 }
 
 export class AIClient {

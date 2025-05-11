@@ -67,15 +67,15 @@ export default function AIConfigModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger className="dark:bg-[#1a1a1a]" asChild>
         <Button
           variant={isConfigured ? "outline" : "default"}
-          className="gap-2"
+          className="gap-2 dark:bg-[#1a1a1a]"
         >
           <Brain className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] dark:bg-[#1a1a1a]">
         <DialogHeader>
           <DialogTitle>AI Provider Configuration</DialogTitle>
           <DialogDescription>

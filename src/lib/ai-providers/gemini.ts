@@ -161,14 +161,19 @@ IMPORTANT: Return the complete code in a single HTML file with embedded CSS and 
       const webAppResponse = await this.generateContent(webAppPrompt);
 
       // Then generate a mermaid diagram separately to ensure we get a good one
-      const mermaidPrompt = `Generate a Mermaid diagram that visualizes the key components and flow of a web application based on the following requirements.
+      const mermaidPrompt = `Generate a Mermaid diagram that visualizes the key components and flow of the following web application code.
 
-Use flowchart notation with proper syntax. Example: flowchart TD
-A[Component] --> B[Component]
-A -- action --> C[Component]
+\`\`\`
+${webAppResponse.code || "No code generated."}
+\`\`\`
 
-User requirements: ${prompt}
+Use graph TD notation with proper syntax. Use sequential letters (A, B, C, etc.) as node IDs, followed by descriptive labels in square brackets.
 
+The diagram should follow this pattern:
+A[ComponentName] --> B[ComponentName];
+B -- action --> C[ComponentName];
+
+Include both component connections with arrows and labeled actions between components.
 Only return the Mermaid diagram code without any explanation. The diagram should be detailed and correctly formatted.`;
 
       const mermaidResponse = await this.generateContent(mermaidPrompt);

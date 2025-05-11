@@ -97,7 +97,7 @@ export default function PreviewPanel() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-lg border shadow-sm">
+    <div className="flex flex-col h-full bg-background dark:bg-[#1a1a1a] rounded-lg border shadow-sm">
       <div className="p-3 border-b flex justify-between items-center">
         <div>
           <h3 className="font-medium text-lg">Live Preview</h3>
@@ -129,6 +129,7 @@ export default function PreviewPanel() {
             size="sm"
             onClick={handleRefresh}
             disabled={!generatedCode}
+            className="dark:bg-[#1a1a1a]"
           >
             <RefreshCw
               className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -139,6 +140,7 @@ export default function PreviewPanel() {
             size="sm"
             onClick={openInNewTab}
             disabled={!generatedCode}
+            className="dark:bg-[#1a1a1a]"
           >
             <ExternalLink className="h-4 w-4" />
           </Button>
@@ -147,15 +149,16 @@ export default function PreviewPanel() {
             size="sm"
             onClick={handleDownload}
             disabled={!generatedCode}
+            className="dark:bg-[#1a1a1a]"
           >
             <Download className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 bg-muted/30 p-4 flex items-center justify-center overflow-auto">
+      <div className="flex-1 bg-muted/30 p-4 flex items-center dark:bg-[#1a1a1a] justify-center overflow-auto">
         <div
-          className={`bg-background border rounded-md shadow-sm overflow-hidden transition-all duration-300 ${
+          className={`bg-background border rounded-md dark:bg-[#1a1a1a] shadow-sm overflow-hidden transition-all duration-300 ${
             viewMode === "mobile" ? "w-[375px] h-[667px]" : "w-full h-full"
           }`}
         >

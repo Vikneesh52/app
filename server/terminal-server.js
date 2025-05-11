@@ -1,6 +1,9 @@
 import WebSocket, { WebSocketServer } from "ws";
 import pty from "node-pty";
 import os from "os";
+import * as fs from "fs";
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 // Create WebSocket server
 const wss = new WebSocketServer({ port: 3001 });
@@ -9,93 +12,108 @@ console.log("Terminal server running on port 3001");
 wss.on("connection", (ws) => {
   console.log("Client connected");
 
-  // Default shell based on OS
-  const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
-  let ptyProcess = null;
+  // Unique session directory
+  const userId = uuidv4();
+  const userBaseDir = path.join("/tmp/term-users", userId);
+  fs.mkdirSync(userBaseDir, { recursive: true });
+
+  // Write .bashrc to disable 'cd'
+  fs.writeFileSync(
+    path.join(userBaseDir, ".bashrc"),
+    `
+      alias cd='echo "cd is disabled in this terminal session."'
+      export PS1="\\u@restricted:\\w\\$ "
+    `
+  );
+
+  const shell = os.platform() === "win32" ? "powershell.exe" : "/bin/bash";
   let cols = 80;
   let rows = 24;
+  let ptyProcess = null;
 
-  // Start shell process using node-pty
   const startShell = () => {
-    console.log(`Starting ${shell} process`);
-    ptyProcess = pty.spawn(shell, [], {
+    console.log(`Starting ${shell} in ${userBaseDir}`);
+
+    ptyProcess = pty.spawn(shell, ["--rcfile", ".bashrc"], {
       name: "xterm-color",
-      cols: cols,
-      rows: rows,
-      cwd: process.cwd(),
-      env: process.env,
+      cols,
+      rows,
+      cwd: userBaseDir,
+      env: {
+        ...process.env,
+        HOME: userBaseDir,
+      },
     });
 
-    // Forward terminal output to client
     ptyProcess.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "output", content: data }));
-        console.log(`PTY -> WS: ${data.length} bytes`);
       }
     });
 
-    ptyProcess.onExit((exitCode) => {
-      console.log(`Shell process exited with code ${exitCode}`);
+    ptyProcess.onExit(({ exitCode }) => {
+      console.log(`Shell exited with code ${exitCode}`);
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(
           JSON.stringify({
             type: "output",
-            content: `\r\nProcess exited with code ${exitCode}. Restarting shell...\r\n`,
+            content: `\r\nProcess exited (code ${exitCode}). Restarting...\r\n`,
           })
         );
-        // Restart shell
         startShell();
       }
     });
   };
 
-  // Start the shell immediately
   startShell();
 
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message.toString());
-      console.log("Received message:", data);
+      if (!ptyProcess) return;
 
-      if (!ptyProcess) {
-        console.log("No PTY process available, starting new one");
-        startShell();
-        return;
+      switch (data.type) {
+        case "key":
+          ptyProcess.write(data.key);
+          break;
+        case "paste":
+          ptyProcess.write(data.data);
+          break;
+        case "SIGINT":
+          ptyProcess.write("\x03");
+          break;
+        case "resize":
+          cols = data.cols;
+          rows = data.rows;
+          ptyProcess.resize(cols, rows);
+          break;
+        default:
+          console.log("Unknown message type:", data.type);
       }
-
-      if (data.type === "key") {
-        // Handle single key press
-        ptyProcess.write(data.key);
-        console.log(
-          `WS -> PTY: Key "${data.key
-            .replace(/\n/g, "\\n")
-            .replace(/\r/g, "\\r")}"`
-        );
-      } else if (data.type === "paste") {
-        // Handle paste event
-        ptyProcess.write(data.data);
-        console.log(`WS -> PTY: Paste ${data.data.length} bytes`);
-      } else if (data.type === "SIGINT") {
-        // Handle Ctrl+C
-        ptyProcess.write("\x03");
-        console.log("WS -> PTY: SIGINT (Ctrl+C)");
-      } else if (data.type === "resize") {
-        // Handle terminal resize
-        cols = data.cols;
-        rows = data.rows;
-        ptyProcess.resize(cols, rows);
-        console.log(`Terminal resized to ${cols}x${rows}`);
-      }
-    } catch (error) {
-      console.error("Error processing message:", error);
+    } catch (err) {
+      console.error("Failed to process message:", err);
     }
   });
 
   ws.on("close", () => {
     console.log("Client disconnected");
+
     if (ptyProcess) {
       ptyProcess.kill();
       ptyProcess = null;
+    }
+
+    // Clean up user directory
+    try {
+      fs.rmSync(userBaseDir, {
+        recursive: true,
+        force: true,
+        maxRetries: 3,
+        retryDelay: 100,
+      });
+      console.log(`Cleaned up directory: ${userBaseDir}`);
+    } catch (err) {
+      console.error(`Failed to clean up ${userBaseDir}:`, err);
     }
   });
 });

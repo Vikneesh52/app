@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Download, Settings } from "lucide-react";
+import { Send, Download, Settings, Loader } from "lucide-react";
 import { useAuth } from "../../../../supabase/auth";
 import ReactMarkdown from "react-markdown";
 import { useAI } from "@/lib/ai-context";
@@ -18,11 +18,16 @@ const components = {
   ),
 };
 
+// Define message types for better organization
+type MessageStatus = "complete" | "thinking" | "processing" | "error";
+
 type Message = {
   id: string;
   content: string;
   sender: "user" | "ai";
   timestamp: Date;
+  status?: MessageStatus;
+  processSteps?: string[];
 };
 
 export default function ChatPanel() {
@@ -33,9 +38,10 @@ export default function ChatPanel() {
     {
       id: "1",
       content:
-        "Hello! I'm your AI assistant. How can I help you build your web application today?",
+        "Hello! I'm WebSmith. How can I help you build your web application today?",
       sender: "ai",
       timestamp: new Date(),
+      status: "complete",
     },
   ]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -43,12 +49,15 @@ export default function ChatPanel() {
   // Listen for chat updates from the prompt panel
   useEffect(() => {
     const handleChatUpdate = (event: CustomEvent) => {
-      const { id, content, sender, timestamp } = event.detail;
+      const { id, content, sender, timestamp, status, processSteps } =
+        event.detail;
       const newMessage: Message = {
         id: id || Date.now().toString(),
         content: content,
         sender: sender,
         timestamp: new Date(timestamp), // Parse the timestamp string
+        status: status || "complete",
+        processSteps: processSteps || [],
       };
       setMessages((prev) => [...prev, newMessage]);
     };
@@ -86,6 +95,7 @@ export default function ChatPanel() {
       content: input,
       sender: "user",
       timestamp: new Date(),
+      status: "complete",
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -94,31 +104,74 @@ export default function ChatPanel() {
     const userQuery = input;
     setInput("");
 
-    // Show loading indicator
-    const loadingId = Date.now() + 1;
-    const loadingMessage: Message = {
-      id: loadingId.toString(),
-      content: "Thinking...",
+    // Show thinking indicator
+    const aiMessageId = Date.now() + 1;
+    const aiMessage: Message = {
+      id: aiMessageId.toString(),
+      content: "",
       sender: "ai",
       timestamp: new Date(),
+      status: "thinking",
+      processSteps: ["Analyzing your request..."],
     };
 
-    setMessages((prev) => [...prev, loadingMessage]);
+    setMessages((prev) => [...prev, aiMessage]);
 
     try {
+      // First update: Show processing
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMessageId.toString()
+              ? {
+                  ...msg,
+                  status: "processing",
+                  processSteps: [
+                    ...(msg.processSteps || []),
+                    "Generating response...",
+                  ],
+                }
+              : msg
+          )
+        );
+      }, 1000);
+
+      // Second update: Add another step
+      setTimeout(() => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === aiMessageId.toString()
+              ? {
+                  ...msg,
+                  processSteps: [
+                    ...(msg.processSteps || []),
+                    "Formatting code and diagrams...",
+                  ],
+                }
+              : msg
+          )
+        );
+      }, 2000);
+
       // Send to AI and get response
       const response = await generateApp(userQuery);
 
-      // Remove loading message and add actual response
+      // Final update: Complete response
       setMessages((prev) =>
-        prev
-          .filter((msg) => msg.id !== loadingId.toString())
-          .concat({
-            id: (Date.now() + 2).toString(),
-            content: response.text || "Sorry, I couldn't generate a response.",
-            sender: "ai",
-            timestamp: new Date(),
-          })
+        prev.map((msg) =>
+          msg.id === aiMessageId.toString()
+            ? {
+                ...msg,
+                content:
+                  response.text || "Sorry, I couldn't generate a response.",
+                status: "complete",
+                processSteps: [
+                  ...(msg.processSteps || []),
+                  "Response complete!",
+                ],
+              }
+            : msg
+        )
       );
 
       // Dispatch events to update other panels if response contains code or mermaid
@@ -138,15 +191,20 @@ export default function ChatPanel() {
     } catch (error) {
       // Handle error
       setMessages((prev) =>
-        prev
-          .filter((msg) => msg.id !== loadingId.toString())
-          .concat({
-            id: (Date.now() + 2).toString(),
-            content:
-              "Sorry, there was an error processing your request. Please try again.",
-            sender: "ai",
-            timestamp: new Date(),
-          })
+        prev.map((msg) =>
+          msg.id === aiMessageId.toString()
+            ? {
+                ...msg,
+                content:
+                  "Sorry, there was an error processing your request. Please try again.",
+                status: "error",
+                processSteps: [
+                  ...(msg.processSteps || []),
+                  "Error encountered!",
+                ],
+              }
+            : msg
+        )
       );
       console.error("Error generating response:", error);
     }
@@ -176,11 +234,39 @@ export default function ChatPanel() {
     URL.revokeObjectURL(url);
   };
 
+  // Renders the status indicator based on the message's status
+  const renderStatusIndicator = (status?: MessageStatus) => {
+    switch (status) {
+      case "thinking":
+        return (
+          <div className="flex items-center gap-2 text-xs text-blue-500 mt-1">
+            <Loader className="h-3 w-3 animate-spin" />
+            <span>Thinking...</span>
+          </div>
+        );
+      case "processing":
+        return (
+          <div className="flex items-center gap-2 text-xs text-amber-500 mt-1">
+            <Loader className="h-3 w-3 animate-spin" />
+            <span>Processing...</span>
+          </div>
+        );
+      case "error":
+        return (
+          <div className="flex items-center gap-2 text-xs text-red-500 mt-1">
+            <span>Error occurred</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-background rounded-lg border shadow-sm">
+    <div className="flex flex-col h-full bg-background dark:bg-[#1a1a1a] rounded-lg border shadow-sm">
       <div className="p-3 border-b flex justify-between items-center">
         <div>
-          <h3 className="font-medium text-lg">AI Assistant</h3>
+          <h3 className="font-medium text-lg">WebSmith</h3>
           <p className="text-sm text-muted-foreground">
             Chat with AI to refine your app
           </p>
@@ -191,6 +277,7 @@ export default function ChatPanel() {
             size="sm"
             onClick={handleExportChat}
             disabled={messages.length <= 1}
+            className="dark:bg-[#1a1a1a]"
           >
             <Download className="h-4 w-4 mr-1" /> Export
           </Button>
@@ -208,10 +295,10 @@ export default function ChatPanel() {
               }`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`${
                   message.sender === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    ? "border p-3 rounded-lg max-w-[80%] "
+                    : "w-full px-4"
                 }`}
               >
                 {message.sender === "ai" && (
@@ -220,16 +307,38 @@ export default function ChatPanel() {
                       <AvatarImage src="https://api.dicebear.com/7.x/bottts/svg?seed=ai" />
                       <AvatarFallback>AI</AvatarFallback>
                     </Avatar>
-                    <span className="text-xs font-medium">AI Assistant</span>
+                    <span className="text-xs font-medium">WebSmith</span>
                   </div>
                 )}
-                {/* <p className="text-sm whitespace-pre-wrap">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
-                </p> */}
                 <div className="text-sm whitespace-pre-wrap leading-tight">
-                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                  <ReactMarkdown components={components}>
+                    {message.content}
+                  </ReactMarkdown>
                 </div>
-                <span className="text-xs opacity-70 block text-right mt-1">
+
+                {/* Status indicator for AI messages */}
+                {message.sender === "ai" &&
+                  renderStatusIndicator(message.status)}
+
+                {/* Processing steps for AI messages */}
+                {message.sender === "ai" &&
+                  message.processSteps &&
+                  message.processSteps.length > 0 &&
+                  message.status !== "complete" && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <ul className="list-disc pl-4 space-y-1">
+                        {message.processSteps.map((step, index) => (
+                          <li key={index}>{step}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                <span
+                  className={`text-xs opacity-70 block mt-1 ${
+                    message.sender === "user" ? "text-right" : "text-left"
+                  }`}
+                >
                   {message.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -252,11 +361,16 @@ export default function ChatPanel() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask the AI assistant..."
+            placeholder="Ask the WebSmith..."
             className="flex-1"
+            disabled={isGenerating}
           />
           <AIConfigModal />
-          <Button type="submit" size="icon">
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isGenerating || !input.trim() || !isConfigured}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </form>
